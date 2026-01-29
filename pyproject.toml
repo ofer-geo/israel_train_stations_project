@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "israel-train-stations-project"
+version = "0.1.0"
+description = ""
+authors = ["ofer-geo <shahalo@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.14"
+numpy = "^2.4.1"
+requests = "^2.32.5"
+pyluach = "^2.3.0"
+plotly = "^6.5.2"
+seaborn = "^0.13.2"
+folium = "^0.20.0"
+streamlit = "^1.53.1"
+streamlit-folium = "^0.26.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
