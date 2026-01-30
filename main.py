@@ -356,7 +356,7 @@ def station_location_on_map(df: pd.DataFrame, stop_code: int, station_name: str)
 
 st.set_page_config(page_title="Train Station Activations", layout="wide")
 
-st.title("Train Station Activations")
+st.title("Israeli Train Stations Departures Dashboard")
 st.markdown(
     """
     This dashboard presents **average daily passenger activations** at **Israel Railways train stations**.
