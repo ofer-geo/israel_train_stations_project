@@ -101,3 +101,17 @@ The app will open automatically in your browser at:
 ```arduino
 http://localhost:8501
 ```
+
+---
+
+## Deployment
+This project is designed to run on *Streamlit Community Cloud* directly from this repository.
+
+- Dependencies are defined in requirements.txt
+
+- All file paths are project-relative
+
+- No local configuration is required 
+
+After deployment, the app can be shared via a public URL.
+---
