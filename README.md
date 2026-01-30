@@ -77,3 +77,17 @@ train_stations_project/
 ├── files/
 │   └── stations.txt     # GTFS stops data
 └── ...
+```
+
+## Getting Started
+
+### 1) Clone the repository
+
+```bash
+git clone <YOUR_REPO_URL>
+cd train_stations_project
+```
+
+### 2) Install dependencies
+```bash
+Install dependencies
