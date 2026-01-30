@@ -66,6 +66,39 @@ def non_service_days_by_month_israel(year: int) -> dict[int, list[int]]:
 
     return out
 
+def service_days_dict(year: int):
+    """
+    Build a mapping of service days (working days) for each month.
+
+    Returns:
+        {
+            month (1–12): ["day_1", "day_2", ...]
+        }
+
+    Service days exclude weekends and public holidays,
+    as defined by `non_service_days_by_month_israel`.
+    """
+    # Get non-service days (weekends + holidays) per month
+    non_service_days = non_service_days_by_month_israel(year)
+
+    service_days = {}
+
+    # Iterate through all months of the year
+    for month in range(1, 13):
+        # Number of days in the current month
+        number_of_days = calendar.monthrange(year, month)[1]
+
+        # Keep only working days in "day_X" format
+        days = [
+            f"day_{i}"
+            for i in range(1, number_of_days + 1)
+            if i not in non_service_days[month]
+        ]
+
+        service_days[month] = days
+
+    return service_days
+
 
 def get_month_day_weekday_dict(year: int) -> dict[int, dict[str, str]]:
     """
@@ -104,7 +137,7 @@ def get_trains_stations_info(df_stations: pd.DataFrame):
     """
     df_train_stations = df_stations[df_stations["stop_code"].between(17000, 17200, inclusive="both")]
     train_stations_dict = dict(zip(df_train_stations["stop_name"], df_train_stations["stop_code"]))
-    train_station_names = list(train_stations_dict.keys())
+    train_station_names = sorted(list(train_stations_dict.keys()))
     return train_stations_dict, train_station_names
 
 
@@ -148,13 +181,12 @@ def get_station_activations_info(stop_code: int) -> pd.DataFrame | None:
 
 # ==================== Aggregations ====================
 
-def station_avg_daily_activations(df: pd.DataFrame, year: int, month: int, non_service_days: dict) -> float:
+def station_avg_daily_activations(df: pd.DataFrame, year: int, month: int, service_days: dict) -> float:
     """
     Compute mean daily activations for a given month,
     excluding weekends/holidays (non_service_days).
     """
-    number_of_days = calendar.monthrange(year, month)[1]
-    days = [f"day_{i}" for i in range(1, number_of_days + 1) if i not in non_service_days[month]]
+    days = service_days[month]
     day_sums = np.array([df.loc[df.month_key == month, day].sum() for day in days])
     return float(round(day_sums.mean(), 1))
 
@@ -179,7 +211,7 @@ def summing_activations_time_of_day(df: pd.DataFrame, year: int, month: int, day
     return day_dict
 
 
-def get_daily_pattern_df(df: pd.DataFrame, year: int, non_service_days: dict) -> pd.DataFrame:
+def get_daily_pattern_df(df: pd.DataFrame, year: int, service_days: dict) -> pd.DataFrame:
     """
     Build a time-of-day distribution for the whole year:
     - aggregates across all working days
@@ -188,8 +220,9 @@ def get_daily_pattern_df(df: pd.DataFrame, year: int, non_service_days: dict) ->
     general_dict = defaultdict(int)
 
     for month in range(1, 13):
-        number_of_days = calendar.monthrange(2025, month)[1]
-        days = [f"day_{i}" for i in range(1, number_of_days + 1) if i not in non_service_days[month]]
+
+
+        days = service_days[month]
 
         for day in days:
             day_dict = summing_activations_time_of_day(df, year, month, day)
@@ -201,7 +234,7 @@ def get_daily_pattern_df(df: pd.DataFrame, year: int, non_service_days: dict) ->
     return daily_pattern_df
 
 
-def weekday_pattern_df(df: pd.DataFrame, year: int, non_service_days: dict) -> pd.DataFrame:
+def weekday_pattern_df(df: pd.DataFrame, year: int, service_days: dict) -> pd.DataFrame:
     """
     Aggregate activations by weekday (Sun–Thu) for working days only.
     Returns a DF with total + percent.
@@ -210,8 +243,8 @@ def weekday_pattern_df(df: pd.DataFrame, year: int, non_service_days: dict) -> p
     weekday_activations = {d: 0 for d in weekdays}
 
     for month in range(1, 13):
-        number_of_days = calendar.monthrange(2025, month)[1]
-        days = [f"day_{i}" for i in range(1, number_of_days + 1) if i not in non_service_days[month]]
+
+        days = service_days[month]
 
         for day in days:
             # NOTE: This also references global station_df in your current code.
@@ -376,7 +409,8 @@ st.markdown(
 
 # --- Global app settings/data that do not depend on station selection
 year = 2025
-non_service_days = non_service_days_by_month_israel(year)
+
+service_days = service_days_dict(year)
 weekdays_dict = get_month_day_weekday_dict(year)
 
 # Load GTFS stops (project-relative path)
@@ -400,17 +434,17 @@ if station_df is None or station_df.empty:
 else:
     # 1) Monthly averages (working days only)
     monthly_avg = {
-        month: station_avg_daily_activations(station_df, year, month, non_service_days)
+        month: station_avg_daily_activations(station_df, year, month, service_days)
         for month in range(1, 13)
     }
     monthly_avg_df = pd.DataFrame.from_dict(monthly_avg, orient="index", columns=["value"])
     monthly_avg_df.index.name = "month"
 
     # 2) Time-of-day distribution (percent)
-    daily_pattern_df = get_daily_pattern_df(station_df, year, non_service_days)
+    daily_pattern_df = get_daily_pattern_df(station_df, year, service_days)
 
     # 3) Weekday distribution (percent)
-    df_weekday = weekday_pattern_df(station_df, year, non_service_days)
+    df_weekday = weekday_pattern_df(station_df, year, service_days)
 
     # --- Layout: two main columns (charts left, map+pie right)
     col1, col2 = st.columns([2, 1])
