@@ -91,3 +91,13 @@ cd train_stations_project
 ### 2) Install dependencies
 ```bash
 Install dependencies
+```
+### 3) Run the application
+```bash
+streamlit run main.py
+```
+
+The app will open automatically in your browser at:
+```arduino
+http://localhost:8501
+```
