@@ -6,6 +6,14 @@ Select a station to analyze monthly trends, temporal usage patterns, weekday dis
 
 ---
 
+## Purpose
+This project is intended for:
+- Exploratory analysis of public transportation demand
+- Visual comparison between train stations
+- Demonstrating data engineering, visualization, and dashboard design skills
+
+---
+
 ## Features
 
 - **Station selector**
@@ -112,6 +120,4 @@ This project is designed to run on *Streamlit Community Cloud* directly from thi
 - All file paths are project-relative
 
 - No local configuration is required 
-
 After deployment, the app can be shared via a public URL.
----
