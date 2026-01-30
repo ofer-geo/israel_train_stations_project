@@ -1,77 +1,74 @@
-Train Station Activations Dashboard (Israel)
+# Train Station Activations Dashboard (Streamlit)
 
-An interactive Streamlit dashboard for exploring passenger activation patterns at Israel Railways train stations.
+An interactive **Streamlit dashboard** for exploring **passenger activation patterns at Israel Railways train stations** based on official public transportation data.
 
-The dashboard visualizes average daily departures, temporal patterns, and spatial context based on official public data.
+Select a station to analyze monthly trends, temporal usage patterns, weekday distributions, and geographic location.
 
-What does the dashboard show?
+---
 
-After selecting a train station, the dashboard presents:
+## Features
 
-Monthly average daily departures
-(working days only, aggregated per month)
+- **Station selector**
+  - Choose any Israel Railways train station from the GTFS dataset
 
-Geographic location of the selected station
+- **Monthly average daily departures**
+  - Aggregated per month
+  - Calculated for **working days only**
 
-Distribution of departures by time of day
-Grouped into 7 service periods (early morning, morning peak, evening peak, etc.)
+- **Time-of-day distribution**
+  - Passenger departures grouped into **7 service periods**
+  - Displayed as percentage share
 
-Weekday distribution of departures
-Share of passenger activations across Sunday–Thursday
+- **Weekday distribution**
+  - Share of passenger activations across **Sunday–Thursday**
 
-All calculations are based on working days only, excluding:
+- **Geographic visualization**
+  - Interactive station location map (Folium)
 
-Weekends (Fridays and Saturdays)
+---
 
-Israeli public holidays and their eves
+## Methodology
 
-Data sources
+- Daily activation columns (`day_1`, `day_2`, …) are aggregated per month
+- Non-service days are excluded:
+  - Fridays and Saturdays
+  - Israeli public holidays and their eves
+- Time-of-day analysis aggregates all working days across the year
+- Percent distributions are calculated relative to total yearly activations
 
-Passenger activation data
-From the Israeli government open data portal:
-https://data.gov.il
+The analysis focuses on **the year 2025**.
 
-GTFS station data
-Used for station names and geographic coordinates
+---
 
-The analysis in this project focuses on the year 2025.
+## Tech Stack
 
-Methodology (high level)
+- **Python**
+- **Streamlit** (dashboard framework)
+- **Pandas** (data processing)
+- **NumPy** (numerical operations)
+- **Requests** (API access)
+- **Plotly Express** (interactive charts)
+- **Matplotlib / Seaborn** (static charts)
+- **Folium** (interactive maps)
+- **streamlit-folium** (Folium integration)
+- **pyluach** (Jewish holiday calendar)
 
-Daily activation columns (day_1, day_2, …) are aggregated per month
+---
 
-Non-service days are excluded using:
+## Data Sources
 
-Calendar weekends
+- **Passenger activation data**
+  - Israeli Government Open Data Portal  
+    https://data.gov.il
 
-Jewish holidays (via pyluach)
+- **GTFS station data**
+  - Used for station names and geographic coordinates
 
-Time-of-day patterns are aggregated across all working days
+---
 
-Percent distributions are calculated relative to total yearly activations
+## Project Structure
 
-Running the app locally
-1. Clone the repository
-git clone <your-repo-url>
-cd train_stations_project
-
-2. Install dependencies
-pip install -r requirements.txt
-
-3. Run Streamlit
-streamlit run main.py
-
-
-The app will open automatically in your browser at:
-http://localhost:8501
-
-Deployment
-
-The app is designed to run on Streamlit Community Cloud directly from this repository.
-
-Dependencies are defined in requirements.txt, and all file paths are project-relative.
-
-Project structure
+```text
 train_stations_project/
 │
 ├── main.py              # Streamlit application
@@ -80,21 +77,3 @@ train_stations_project/
 ├── files/
 │   └── stations.txt     # GTFS stops data
 └── ...
-
-Purpose
-
-This project is intended for:
-
-Exploratory data analysis
-
-Visual comparison between train stations
-
-Demonstrating data engineering, visualization, and dashboard design skills
-
-Notes
-
-The dashboard focuses on passenger activation patterns, not train schedules
-
-All figures represent aggregated statistics, not individual trips
-
-The project is for analytical and demonstration purposes
