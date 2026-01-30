@@ -120,4 +120,7 @@ This project is designed to run on *Streamlit Community Cloud* directly from thi
 - All file paths are project-relative
 
 - No local configuration is required 
+
 After deployment, the app can be shared via a public URL.
+
+---
