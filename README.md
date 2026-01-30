@@ -71,6 +71,7 @@ The analysis focuses on **the year 2025**.
 
 - **GTFS station data**
   - Used for station names and geographic coordinates
+  - Downloded from here: https://gtfs.mot.gov.il/gtfsfiles/
 
 ---
 
