@@ -13,6 +13,7 @@ import folium
 from streamlit_folium import st_folium
 from streamlit.components.v1 import html as st_html
 from collections import defaultdict
+import matplotlib.patheffects as pe
 
 
 
@@ -110,23 +111,33 @@ def plot_station_daily_avg_by_month(df, station_name):
     df_plot = df.reset_index()
     df_plot.columns = ["month", "value"]
 
+    df_plot["month"] = df_plot["month"].apply(lambda m: calendar.month_abbr[int(m)])
+
     fig = px.bar(
         df_plot,
         x="month",
         y="value",
         labels={"month": "Month", "value": "Average daily departures"},
+        color_discrete_sequence=["#7ED957"]
+    )
+    fig.update_traces(
+        marker_line_color="#2E7D32",  # darker green
+        marker_line_width=1
     )
 
     fig.update_layout(
         height=490,
         margin=dict(t=80, b=30),
         title={
-            "text": f"<b>Monthly Average Daily Departures To Station – {station_name}</b>",
-            "x": 0.5,
-            "xanchor": "center",
+            "text": f"<b>Monthly Average Daily Departures</b>",
+            "x": 0,
+            "xanchor": "left",
             "font": {"size": 22},
         },
+        xaxis_title="<b>Month</b>",
+        yaxis_title="<b>Average daily departures</b>"
     )
+
     return fig  # <-- return instead of fig.show()
 
 
@@ -219,8 +230,6 @@ def plot_daily_pattern_percent(daily_pattern_df, station_name=None, height=600, 
         dfp = dfp.drop(columns=["_start"])
 
     title = "<b>Passenger Activations by Time of Day (%)</b>"
-    if station_name:
-        title = f"<b>Passenger Activations by Time of Day (%) – {station_name}</b>"
 
     fig = px.bar(
         dfp,
@@ -228,6 +237,11 @@ def plot_daily_pattern_percent(daily_pattern_df, station_name=None, height=600, 
         y="Percent",
         labels={"Percent": "Share of activations (%)", "Time of day": ""},
         title=title,
+        color_discrete_sequence=["#F28B82"]
+    )
+    fig.update_traces(
+        marker_line_color="#B71C1C",  # darker red
+        marker_line_width=1
     )
 
     fig.update_traces(
@@ -242,6 +256,18 @@ def plot_daily_pattern_percent(daily_pattern_df, station_name=None, height=600, 
         margin=dict(t=80, b=80, l=40, r=40),
         yaxis=dict(ticksuffix="%", rangemode="tozero"),
         xaxis_tickangle=-25,
+
+    )
+
+    fig.update_layout(
+        title={
+            "text": f"<b>Passenger Departures by Time of Day (%)</b>",
+            "x": 0,
+            "xanchor": "left",
+            "font": {"size": 22},
+        },
+        xaxis_title="<b>Time of the day</b>",
+        yaxis_title="<b>Share of departures</b>"
     )
 
     return fig
@@ -286,7 +312,8 @@ def plot_weekday_percent_pie(
         percents,
         autopct="%1.1f%%",
         startangle=90,
-        counterclock=False
+        counterclock=False,
+        textprops={"fontsize": 14}
     )
 
     ax.legend(
@@ -294,7 +321,9 @@ def plot_weekday_percent_pie(
         labels,
         title="Day of week",
         loc="center left",
-        bbox_to_anchor=(1, 0.5)
+        bbox_to_anchor=(1, 0.3),
+        fontsize = 13,
+        title_fontsize=14
     )
 
     plt.tight_layout()
@@ -327,6 +356,7 @@ def get_month_day_weekday_dict(year: int) -> dict[int, dict[str, str]]:
     return out
 
 st.set_page_config(page_title="Train Station Activations", layout="wide")
+
 st.title("Train Station Activations")
 st.markdown(
     """
@@ -337,7 +367,10 @@ st.markdown(
 
     Select a station to explore:
     - 📊 **Monthly average daily departures**  
-    - 🗺️ **Geographic location** of the selected station  
+    - 🗺️ **Geographic location** of the selected station
+    - ⏰ **Distribution of departures by time of day**, grouped into **7 service periods**
+    - 📅 **Weekday distribution of departures** across working days
+      
 
     The dashboard is intended for **exploratory analysis and comparison between stations**.
     """
@@ -403,7 +436,7 @@ else:
             st.pyplot(fig3, clear_figure=True)
             st.markdown(
                 """
-                <div style="padding-bottom:45px;">
+                <div style="padding-bottom:70px;">
                 """,
                 unsafe_allow_html=True,
             )
