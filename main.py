@@ -388,6 +388,30 @@ def station_location_on_map(df: pd.DataFrame, stop_code: int, station_name: str)
 # ==================== Streamlit app ====================
 
 st.set_page_config(page_title="Train Station Activations", layout="wide")
+st.markdown(
+    """
+    <style>
+    /* Main app background */
+    .stApp {
+        background-color: #f2f2f2;
+    }
+
+    /* Containers (st.container, st.columns, etc.) */
+    div[data-testid="stVerticalBlock"] > div {
+        background-color: white;
+        border-radius: 8px;
+        padding: 12px;
+    }
+
+    /* Optional: remove extra padding around page */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 st.title("Israeli Train Stations Departures Dashboard")
 st.markdown(
@@ -462,12 +486,12 @@ else:
         with st.container(border=True):
             st.subheader("Station location")
             m = station_location_on_map(stations, stop_code, station_name)
-            st_folium(m, width=450, height=420, returned_objects=[], key="map")
+            st_folium(m, width=450, height=375, returned_objects=[], key="map")
 
         with st.container(border=True):
             st.subheader("Weekday distribution")
-            fig3 = plot_weekday_percent_pie(df_weekday)
+            fig3 = plot_weekday_percent_pie(df_weekday, figsize=(7, 7))
             st.pyplot(fig3, clear_figure=True)
 
             # Extra padding at the bottom of this panel (purely visual balance)
-            st.markdown('<div style="padding-bottom:70px;"></div>', unsafe_allow_html=True)
+            st.markdown('<div style="padding-bottom:40px;"></div>', unsafe_allow_html=True)
