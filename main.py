@@ -416,7 +416,7 @@ st.markdown(
 st.title("Israeli Train Stations Departures Dashboard")
 st.markdown(
     """
-    This dashboard presents **average daily passenger activations** at **Israel Railways train stations**.
+    This dashboard presents **average daily passenger departures** at **Israel Railways train stations**.
 
     The analysis is based on **official public data from data.gov.il** and covers **the year 2025**.
     All figures reflect **working days only**, excluding **weekends (Fridays and Saturdays)** and **public holidays**.
