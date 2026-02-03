@@ -1,6 +1,6 @@
 # Train Station Departures Dashboard (Streamlit)
 
-An interactive **Streamlit dashboard** for exploring **passenger activation patterns at Israel Railways train stations** based on official public transportation data.
+An interactive **Streamlit dashboard** for exploring **passenger departures patterns at Israel Railways train stations** based on official public transportation data.
 
 Select a station to analyze monthly trends, temporal usage patterns, weekday distributions, and geographic location.
 
