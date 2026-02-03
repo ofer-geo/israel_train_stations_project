@@ -101,7 +101,7 @@ train_stations_project/
 ### 1) Clone the repository
 
 ```bash
-git clone <YOUR_REPO_URL>
+git clone https://github.com/ofer-geo/israel_train_stations_project.git
 cd train_stations_project
 ```
 
