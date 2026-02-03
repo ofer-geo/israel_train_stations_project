@@ -6,6 +6,14 @@ Select a station to analyze monthly trends, temporal usage patterns, weekday dis
 
 ---
 
+## Live Application
+
+The dashboard is publicly available on Streamlit Community Cloud:
+
+**https://israeltrainstationsproject.streamlit.app/**
+
+---
+
 ## Purpose
 This project is intended for:
 - Exploratory analysis of public transportation demand
@@ -99,7 +107,7 @@ cd train_stations_project
 
 ### 2) Install dependencies
 ```bash
-Install dependencies
+pip install -r requirements.txt
 ```
 ### 3) Run the application
 ```bash
