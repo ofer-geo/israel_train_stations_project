@@ -1,15 +1,7 @@
 import json
 import requests
 import pandas as pd
-
-# CKAN Datastore endpoint (data.gov.il)
-BASE = "https://data.gov.il/api/3/action/datastore_search"
-
-# Passenger activations dataset resource id
-RESOURCE_ID_ACTIVATIONS = "b2c6b258-4638-4f8e-bcad-600f0cdfb449"
-
-DEFAULT_TIMEOUT = 30
-
+from config import BASE, RESOURCE_ID_ACTIVATIONS, DEFAULT_TIMEOUT
 
 def get_station_activations_info(stop_code: int) -> pd.DataFrame | None:
     """

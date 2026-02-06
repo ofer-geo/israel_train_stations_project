@@ -18,10 +18,11 @@ import streamlit as st
 from streamlit_folium import st_folium
 from data.ckan_client import get_station_activations_info
 from data.gtfs import get_trains_stations_info
-import calendar_utils.calendar_helpers
+from  calendar_utils.calendar_helpers import service_days_dict, get_month_day_weekday_dict
 from data_agg.data_aggregators import station_avg_daily_activations, get_daily_pattern_df, weekday_pattern_df
 from visualization.plots import (plot_station_daily_avg_by_month, plot_daily_pattern_percent,plot_weekday_percent_pie)
 from visualization.maps import station_location_on_map
+from config import year
 
 # ==================== Streamlit app ====================
 
@@ -69,11 +70,10 @@ st.markdown(
     """
 )
 
-# --- Global app settings/data that do not depend on station selection
-year = 2025
 
-service_days = calendar_utils.calendar_helpers.service_days_dict(year)
-weekdays_dict = calendar_utils.calendar_helpers.get_month_day_weekday_dict(year)
+
+service_days = service_days_dict(year)
+weekdays_dict = get_month_day_weekday_dict(year)
 
 # Load GTFS stops (project-relative path)
 stations = pd.read_csv("data/stops.txt")
