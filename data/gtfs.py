@@ -1,3 +1,4 @@
+import pandas as pd
 def get_trains_stations_info(df_stations: pd.DataFrame):
     """
     Filter GTFS stops to (approx.) Israel Railways station stop_code range,
