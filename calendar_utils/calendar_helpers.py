@@ -1,6 +1,7 @@
 import calendar
 from datetime import date
 from pyluach.dates import GregorianDate
+import pandas as pd
 
 def non_service_days_by_month_israel(year: int) -> dict[int, list[int]]:
     """
@@ -38,7 +39,7 @@ def non_service_days_by_month_israel(year: int) -> dict[int, list[int]]:
 
     return out
 
-def service_days_dict(year: int)-> dict[int, list[str]]:
+def service_days_dict(years: list[int])-> dict[int, list[str]]:
     """
     Build a mapping of service days (working days) for each month.
 
@@ -51,83 +52,65 @@ def service_days_dict(year: int)-> dict[int, list[str]]:
     as defined by `non_service_days_by_month_israel`.
     """
     # Get non-service days (weekends + holidays) per month
-    non_service_days = non_service_days_by_month_israel(year)
+    service_days_by_year = {}
 
-    service_days = {}
+    for year in years:
 
-    # Iterate through all months of the year
-    for month in range(1, 13):
-        # Number of days in the current month
-        number_of_days = calendar.monthrange(year, month)[1]
+        non_service_days = non_service_days_by_month_israel(year)
+        service_days = {}
+        # Iterate through all months of the year
+        for month in range(1, 13):
+            # Number of days in the current month
+            number_of_days = calendar.monthrange(year, month)[1]
+            # Keep only working days in "day_X" format
+            days = [
+                f"day_{i}"
+                for i in range(1, number_of_days + 1)
+                if i not in non_service_days[month]
+            ]
+            service_days[month] = days
+        service_days_by_year[year] = service_days
 
-        # Keep only working days in "day_X" format
-        days = [
-            f"day_{i}"
-            for i in range(1, number_of_days + 1)
-            if i not in non_service_days[month]
-        ]
-
-        service_days[month] = days
-
-    return service_days
+    return service_days_by_year
 
 
-def get_month_day_weekday_dict(year: int) -> dict[int, dict[str, str]]:
+def get_month_day_weekday_dict(years:list) -> dict[int, dict[str, str]]:
     """
-    Returns:
-    {
-        month (1-12): {
-            "day_1": "Monday",
-            "day_2": "Tuesday",
-            ...
-        }
-    }
-    """
-    out: dict[int, dict[str, str]] = {}
-
-    for month in range(1, 13):
-        days_in_month = calendar.monthrange(year, month)[1]
-        month_dict: dict[str, str] = {}
-
-        for day in range(1, days_in_month + 1):
-            weekday_name = date(year, month, day).strftime("%A")
-            month_dict[f"day_{day}"] = weekday_name
-
-        out[month] = month_dict
-
-    return out
-
-
-
-def service_days_dict(year: int)-> dict[int, list[str]]:
-    """
-    Build a mapping of service days (working days) for each month.
-
-    Returns:
+        Returns:
         {
-            month (1–12): ["day_1", "day_2", ...]
+            year: {
+                month (1–12): {
+                    "day_1": "Monday",
+                    "day_2": "Tuesday",
+                    ...
+                }
+            }
         }
-
-    Service days exclude weekends and public holidays,
-    as defined by `non_service_days_by_month_israel`.
     """
-    # Get non-service days (weekends + holidays) per month
-    non_service_days = non_service_days_by_month_israel(year)
+    out_by_year: dict[int, dict[int, dict[str, str]]] = {}
 
-    service_days = {}
+    for year in years:
+        year_dict: dict[int, dict[str, str]] = {}
 
-    # Iterate through all months of the year
-    for month in range(1, 13):
-        # Number of days in the current month
-        number_of_days = calendar.monthrange(year, month)[1]
+        for month in range(1, 13):
+            days_in_month = calendar.monthrange(year, month)[1]
+            month_dict: dict[str, str] = {}
 
-        # Keep only working days in "day_X" format
-        days = [
-            f"day_{i}"
-            for i in range(1, number_of_days + 1)
-            if i not in non_service_days[month]
-        ]
+            for day in range(1, days_in_month + 1):
+                weekday_name = date(year, month, day).strftime("%A")
+                month_dict[f"day_{day}"] = weekday_name
 
-        service_days[month] = days
+            year_dict[month] = month_dict
+        out_by_year[year] = year_dict
 
-    return service_days
+    return out_by_year
+
+def filter_df_by_dates(df: pd.DataFrame, from_date, to_date):
+    from_ts = pd.Timestamp(from_date)
+    to_ts   = pd.Timestamp(to_date)
+
+    df = df[
+        (df["date"] >= from_ts) &
+        (df["date"] <= to_ts)
+    ]
+    return df

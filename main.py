@@ -16,13 +16,14 @@ Data source: data.gov.il (official public datasets)
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
-from data.ckan_client import get_station_activations_info
+from datetime import date
+from data.ckan_client import merge_dfs_different_years
 from data.gtfs import get_trains_stations_info
-from  calendar_utils.calendar_helpers import service_days_dict, get_month_day_weekday_dict
-from data_agg.data_aggregators import station_avg_daily_activations, get_daily_pattern_df, weekday_pattern_df
+from  calendar_utils.calendar_helpers import service_days_dict, get_month_day_weekday_dict, filter_df_by_dates
+from data_agg.data_aggregators import station_avg_daily_activations_timeseries, get_daily_pattern_df, weekday_pattern_df
 from visualization.plots import (plot_station_daily_avg_by_month, plot_daily_pattern_percent,plot_weekday_percent_pie)
 from visualization.maps import station_location_on_map
-from config import year
+from config import BASE, RESOURCE_IDS, YEARS, DEFAULT_TIMEOUT
 
 # ==================== Streamlit app ====================
 
@@ -53,27 +54,10 @@ st.markdown(
 )
 
 st.title("Israeli Train Stations Departures Dashboard")
-st.markdown(
-    """
-    This dashboard presents **average daily passenger departures** at **Israel Railways train stations**.
-
-    The analysis is based on **official public data from data.gov.il** and covers **the year 2025**.
-    All figures reflect **working days only**, excluding **weekends (Fridays and Saturdays)** and **public holidays**.
-
-    Select a station to explore:
-    - 📊 **Monthly average daily departures**
-    - 🗺️ **Geographic location** of the selected station
-    - ⏰ **Distribution of departures by time of day**, grouped into **7 service periods**
-    - 📅 **Weekday distribution of departures** across working days
-
-    The dashboard is intended for **exploratory analysis and comparison between stations**.
-    """
-)
 
 
-
-service_days = service_days_dict(year)
-weekdays_dict = get_month_day_weekday_dict(year)
+service_days = service_days_dict(YEARS)
+weekdays_dict = get_month_day_weekday_dict(YEARS)
 
 # Load GTFS stops (project-relative path)
 stations = pd.read_csv("data/stops.txt")
@@ -81,55 +65,114 @@ stations = pd.read_csv("data/stops.txt")
 # Build station selector options
 train_stations_dict, train_station_names = get_trains_stations_info(stations)
 
-# --- Station selector (top of page)
-station_name = st.selectbox("Choose a station", train_station_names, index=None)
+# --- Sidebar controls
+st.sidebar.header("Controls")
+
+station_name = st.sidebar.selectbox(
+    "Choose a station",
+    train_station_names,
+    index=None
+)
+
+
+# Date range controls (only show if station is selected)
+st.sidebar.subheader("From Date")
+from_col1, from_col2 = st.sidebar.columns([1.1, 1])
+with from_col1:
+    from_year = st.selectbox("Year", YEARS, index=0, key="from_year")
+with from_col2:
+    from_month = st.selectbox("Month", list(range(1, 13)), index=0, key="from_month")
+
+st.sidebar.subheader("To Date")
+to_col1, to_col2 = st.sidebar.columns([1.1, 1])
+with to_col1:
+    to_year = st.selectbox("Year", YEARS, index=len(YEARS) - 1, key="to_year")
+with to_col2:
+    to_month = st.selectbox("Month", list(range(1, 13)), index=0, key="to_month")
+
+load_clicked = st.sidebar.button("Load", type="primary")
+
 if station_name is None:
+    st.info("Select a station from the sidebar to display results.")
     st.stop()
+
+# validate date range
+from_date = date(int(from_year), int(from_month), 1)
+to_date = date(int(to_year), int(to_month), 1)
+
+if (to_year, to_month) < (from_year, from_month):
+    st.warning("Date range isn't valid (To Date is earlier than From Date).")
+    st.stop()
+
 
 stop_code = train_stations_dict[station_name]
 
+if not load_clicked:
+    st.info("Choose a date range and click **Load**.")
+    st.stop()
+
 # --- Fetch station data from API (updates on selection change)
-station_df = get_station_activations_info(stop_code)
+station_df = merge_dfs_different_years(stop_code,RESOURCE_IDS,BASE,DEFAULT_TIMEOUT)
+station_df["date"] = pd.to_datetime(dict(year=station_df["year_key"], month=station_df["month_key"], day=1))
 
 if station_df is None or station_df.empty:
     st.warning("Couldn't fetch station data - check spelling or try another station.")
-else:
-    # 1) Monthly averages (working days only)
-    monthly_avg = {
-        month: station_avg_daily_activations(station_df, year, month, service_days)
-        for month in range(1, 13)
-    }
-    monthly_avg_df = pd.DataFrame.from_dict(monthly_avg, orient="index", columns=["value"])
-    monthly_avg_df.index.name = "month"
+    st.stop()
 
-    # 2) Time-of-day distribution (percent)
-    daily_pattern_df = get_daily_pattern_df(station_df, year, service_days)
+# --- Filter by dates (your helper)
+station_df = filter_df_by_dates(station_df, from_date, to_date)
 
-    # 3) Weekday distribution (percent)
-    df_weekday = weekday_pattern_df(station_df, year, service_days, weekdays_dict)
+if station_df is None or station_df.empty:
+    st.warning("Date range isn't available for this station (no data in selected period).")
+    st.stop()
 
-    # --- Layout: two main columns (charts left, map+pie right)
-    col1, col2 = st.columns([2, 1])
+# 1) Monthly averages (working days only)
+monthly_avg_df = station_avg_daily_activations_timeseries(station_df, YEARS, service_days)
+from_ts = pd.Timestamp(from_date)
+to_ts = pd.Timestamp(to_date)
 
-    with col1:
-        with st.container(border=True):
-            fig = plot_station_daily_avg_by_month(monthly_avg_df, station_name)
-            st.plotly_chart(fig, use_container_width=True)
+monthly_avg_df = monthly_avg_df[
+    (monthly_avg_df["date"] >= from_ts) &
+    (monthly_avg_df["date"] <= to_ts)
+].reset_index(drop=True)
 
-        with st.container(border=True):
-            fig2 = plot_daily_pattern_percent(daily_pattern_df, station_name=station_name, height=490)
-            st.plotly_chart(fig2, use_container_width=True, key="daily_pattern")
+# 2) Time-of-day distribution (percent)
+daily_pattern_df = get_daily_pattern_df(station_df, YEARS, service_days)
 
-    with col2:
-        with st.container(border=True):
-            st.subheader("Station location")
-            m = station_location_on_map(stations, stop_code, station_name)
-            st_folium(m, width=450, height=375, returned_objects=[], key="map")
+# 3) Weekday distribution (percent)
 
-        with st.container(border=True):
-            st.subheader("Weekday distribution")
-            fig3 = plot_weekday_percent_pie(df_weekday, figsize=(7, 7))
-            st.pyplot(fig3, clear_figure=True)
+# df_weekday = weekday_pattern_df(station_df, YEARS, service_days, weekdays_dict)
+
+
+# --- Layout: two main columns (charts left, map+pie right)
+with st.container(border=True):
+    fig = plot_station_daily_avg_by_month(monthly_avg_df, station_name)
+    st.plotly_chart(fig, use_container_width=True)
+
+col1, col2 = st.columns([2, 1])
+
+with col1:
+        #with st.container(border=True):
+        #    fig = plot_station_daily_avg_by_month(monthly_avg_df, station_name)
+        #    st.plotly_chart(fig, use_container_width=True)
+
+    with st.container(border=True):
+        fig2 = plot_daily_pattern_percent(daily_pattern_df, station_name=station_name, height=490)
+        st.plotly_chart(fig2, use_container_width=True, key="daily_pattern")
+
+with col2:
+    with st.container(border=True):
+        st.subheader("Station location")
+        m = station_location_on_map(stations, stop_code, station_name)
+        st_folium(m, width=450, height=375, returned_objects=[], key="map")
+
+
+
+        #with st.container(border=True):
+            
+        #    st.subheader("Weekday distribution")
+        #    fig3 = plot_weekday_percent_pie(df_weekday, figsize=(7, 7))
+        #    st.pyplot(fig3, clear_figure=True)
 
             # Extra padding at the bottom of this panel (purely visual balance)
-            st.markdown('<div style="padding-bottom:40px;"></div>', unsafe_allow_html=True)
+        #    st.markdown('<div style="padding-bottom:40px;"></div>', unsafe_allow_html=True)

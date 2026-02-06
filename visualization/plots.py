@@ -4,7 +4,7 @@ import calendar
 import plotly.express as px
 import matplotlib.pyplot as plt
 
-def plot_station_daily_avg_by_month(df: pd.DataFrame, station_name: str):
+def plot_station_daily_avg_by_month_old(df: pd.DataFrame, station_name: str):
     """
     Plotly bar chart: monthly average daily departures (working days only).
     """
@@ -12,14 +12,19 @@ def plot_station_daily_avg_by_month(df: pd.DataFrame, station_name: str):
     df_plot.columns = ["month", "value"]
     df_plot["month"] = df_plot["month"].apply(lambda m: calendar.month_abbr[int(m)])
 
-    fig = px.bar(
+
+    fig = px.line(
         df_plot,
         x="month",
         y="value",
         labels={"month": "Month", "value": "Average daily departures"},
         color_discrete_sequence=["#7ED957"],
     )
-    fig.update_traces(marker_line_color="#2E7D32", marker_line_width=1)
+    # Line + marker styling
+    fig.update_traces(
+        line=dict(color="#2E7D32", width=3),
+        marker=dict(size=8, color="#7ED957", line=dict(width=1, color="#2E7D32"))
+    )
 
     fig.update_layout(
         height=490,
@@ -33,6 +38,50 @@ def plot_station_daily_avg_by_month(df: pd.DataFrame, station_name: str):
         xaxis_title="<b>Month</b>",
         yaxis_title="<b>Average daily departures</b>",
     )
+    return fig
+
+def plot_station_daily_avg_by_month(df: pd.DataFrame, station_name: str):
+    """
+    Plotly line chart: monthly average daily departures (working days only).
+    Expects columns: ['date', 'avg_daily_activations'].
+    """
+    y_min = df["avg_daily_activations"].min()
+    y_max = df["avg_daily_activations"].max()
+
+    # Add 20% padding
+    padding = 0.2 * (y_max - y_min) if y_max > y_min else 0
+    y_lower = max(0, y_min-(y_min/5))
+    y_upper = y_max + (y_max/5)
+
+    x_min = df["date"].min()
+    x_max = df["date"].max()
+
+    fig = px.line(
+        df,
+        x="date",
+        y="avg_daily_activations",
+        markers=True,
+        labels={
+            "date": "Month",
+            "avg_daily_activations": "Average daily departures",
+        },
+    )
+
+    fig.update_layout(
+        height=490,
+        margin=dict(t=80, b=30),
+        title={
+            "text": f"<b>Monthly Average Daily Departures – {station_name}</b>",
+            "x": 0,
+            "xanchor": "left",
+            "font": {"size": 22},
+        },
+        xaxis_title="<b>Month</b>",
+        yaxis_title="<b>Average daily departures</b>",
+        yaxis=dict(range=[y_lower, y_upper]),
+        xaxis=dict(range=[x_min, x_max]),
+    )
+
     return fig
 
 

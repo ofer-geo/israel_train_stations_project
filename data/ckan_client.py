@@ -1,15 +1,15 @@
 import json
 import requests
 import pandas as pd
-from config import BASE, RESOURCE_ID_ACTIVATIONS, DEFAULT_TIMEOUT
+from config import BASE, RESOURCE_IDS, DEFAULT_TIMEOUT
 
-def get_station_activations_info(stop_code: int) -> pd.DataFrame | None:
+def get_station_activations_info(stop_code: int, BASE:str, RESOURCE_ID:str,DEFAULT_TIMEOUT:int) -> pd.DataFrame | None:
     """
     Fetch station activations from data.gov.il (CKAN Datastore API) using StationId filter.
     Returns a DataFrame on success, otherwise None.
     """
     params = {
-        "resource_id": RESOURCE_ID_ACTIVATIONS,
+        "resource_id": RESOURCE_ID,
         "filters": json.dumps({"StationId": stop_code}),
     }
 
@@ -36,3 +36,12 @@ def get_station_activations_info(stop_code: int) -> pd.DataFrame | None:
     except requests.exceptions.RequestException:
         print("Couldn't fetch station data - check spelling or try another name")
         return None
+
+
+def merge_dfs_different_years(stop_code:int,RESOURCE_IDS:dict,BASE,DEFAULT_TIMEOUT) -> pd.DataFrame | None:
+    dfs = list()
+    for year in RESOURCE_IDS.keys():
+        df_year = get_station_activations_info(stop_code,BASE,RESOURCE_IDS[year],DEFAULT_TIMEOUT)
+        dfs.append(df_year)
+    df_all = pd.concat(dfs, ignore_index=True)
+    return df_all

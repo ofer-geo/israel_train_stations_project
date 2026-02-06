@@ -11,47 +11,106 @@ def station_avg_daily_activations(df: pd.DataFrame, year: int, month: int, servi
     day_sums = np.array([df.loc[df.month_key == month, day].sum() for day in days])
     return float(round(day_sums.mean(), 1))
 
-
-def summing_activations_time_of_day(df: pd.DataFrame, year: int, month: int, day: str) -> dict:
+def station_avg_daily_activations_timeseries(
+    df: pd.DataFrame,
+    years: list[int],
+    service_days_by_year: dict[int, dict[int, list[str]]],
+) -> pd.DataFrame:
     """
-    Sum station activations for a specific month/day column, grouped by service period (LowOrPeakDescFull).
-    Returns: {time_period_label -> total}
-    """
-    # NOTE: This uses the globally available station_df categories in your current setup.
-    day_dict = {time: 0 for time in df["LowOrPeakDescFull"].unique()}
+    Compute mean daily activations per month across multiple years.
 
+    Returns DataFrame with columns:
+        date | avg_daily_activations
+    Where `date` is the first day of each month (YYYY-MM-01).
+    """
+    rows = []
+
+    for year in years:
+        for month in range(1, 13):
+            days = service_days_by_year[year][month]
+
+            month_df = df.loc[
+                (df["year_key"] == year) & (df["month_key"] == month)
+            ]
+
+            if month_df.empty or not days:
+                avg_val = None
+            else:
+                day_sums = np.array(
+                    [month_df[day].sum() for day in days],
+                    dtype=float
+                )
+                avg_val = round(day_sums.mean(), 1)
+
+            rows.append({
+                "date": pd.Timestamp(year=year, month=month, day=1),
+                "avg_daily_activations": avg_val
+            })
+
+    ts_df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
+
+    # Trim rows outside the actual date range in df
+    df_min = pd.Timestamp(int(df["year_key"].min()), int(df["month_key"].min()), 1)
+    df_max = pd.Timestamp(int(df["year_key"].max()), int(df["month_key"].max()), 1)
+
+    ts_df = ts_df[(ts_df["date"] >= df_min) & (ts_df["date"] <= df_max)]
+
+    return ts_df
+
+
+def _sum_time_of_day_for_day(
+    df: pd.DataFrame,
+    month: int,
+    day: str
+) -> dict:
+    """
+    Sum activations for one day column, grouped by time-of-day.
+    Internal helper.
+    """
     sums = (
         df.loc[df["month_key"] == month]
           .groupby("LowOrPeakDescFull")[day]
           .sum()
     )
 
-    for k in day_dict:
-        day_dict[k] += int(sums.get(k, 0))
-
-    return day_dict
+    return sums.fillna(0).astype(int).to_dict()
 
 
-def get_daily_pattern_df(df: pd.DataFrame, year: int, service_days: dict) -> pd.DataFrame:
+def get_daily_pattern_df(
+    df: pd.DataFrame,
+    years: list[int],
+    service_days_by_year: dict[int, dict[int, list[str]]]
+) -> pd.DataFrame:
     """
-    Build a time-of-day distribution for the whole year:
-    - aggregates across all working days
-    - returns a DF with counts + percentage share
+    Build a time-of-day distribution across multiple years.
+    Returns a DataFrame with total activations and percent share.
     """
     general_dict = defaultdict(int)
 
-    for month in range(1, 13):
+    for year in years:
+        year_df = df[df["year_key"] == year]
 
+        for month in range(1, 13):
+            for day in service_days_by_year[year][month]:
+                day_dict = _sum_time_of_day_for_day(
+                    year_df,
+                    month,
+                    day
+                )
+                for k, v in day_dict.items():
+                    general_dict[k] += v
 
-        days = service_days[month]
+    daily_pattern_df = pd.DataFrame(
+        general_dict.items(),
+        columns=["Time of day", "Activations"]
+    )
 
-        for day in days:
-            day_dict = summing_activations_time_of_day(df, year, month, day)
-            for k, v in day_dict.items():
-                general_dict[k] += v
+    daily_pattern_df["Percent"] = (
+        daily_pattern_df["Activations"]
+        / daily_pattern_df["Activations"].sum()
+        * 100
+    )
 
-    daily_pattern_df = pd.DataFrame(general_dict.items(), columns=["Time of day", "Activations"])
-    daily_pattern_df["Percent"] = daily_pattern_df["Activations"] / daily_pattern_df["Activations"].sum() * 100
     return daily_pattern_df
 
 
