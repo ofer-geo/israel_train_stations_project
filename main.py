@@ -17,13 +17,13 @@ import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 from datetime import date
-from data.ckan_client import merge_dfs_different_years
+from data.ckan_client import fetch_station_df_cached
 from data.gtfs import get_trains_stations_info
 from  calendar_utils.calendar_helpers import service_days_dict, get_month_day_weekday_dict, filter_df_by_dates
 from data_agg.data_aggregators import station_avg_daily_activations_timeseries, get_daily_pattern_df, weekday_pattern_df
-from visualization.plots import (plot_station_daily_avg_by_month, plot_daily_pattern_percent,plot_weekday_percent_pie)
+from visualization.plots import (plot_station_daily_avg_by_month, plot_daily_pattern_percent,plot_station_timeseries)
 from visualization.maps import station_location_on_map
-from config import BASE, RESOURCE_IDS, YEARS, DEFAULT_TIMEOUT
+from config import BASE, RESOURCE_IDS, YEARS, DEFAULT_TIMEOUT, TemporalInterval
 
 # ==================== Streamlit app ====================
 
@@ -76,21 +76,21 @@ station_name = st.sidebar.selectbox(
 
 
 # Date range controls (only show if station is selected)
-st.sidebar.subheader("From Date")
+st.sidebar.markdown("***From Date***")
 from_col1, from_col2 = st.sidebar.columns([1.1, 1])
 with from_col1:
     from_year = st.selectbox("Year", YEARS, index=0, key="from_year")
 with from_col2:
     from_month = st.selectbox("Month", list(range(1, 13)), index=0, key="from_month")
 
-st.sidebar.subheader("To Date")
+st.sidebar.markdown("***To Date***")
 to_col1, to_col2 = st.sidebar.columns([1.1, 1])
 with to_col1:
     to_year = st.selectbox("Year", YEARS, index=len(YEARS) - 1, key="to_year")
 with to_col2:
     to_month = st.selectbox("Month", list(range(1, 13)), index=0, key="to_month")
 
-load_clicked = st.sidebar.button("Load", type="primary")
+
 
 if station_name is None:
     st.info("Select a station from the sidebar to display results.")
@@ -107,34 +107,66 @@ if (to_year, to_month) < (from_year, from_month):
 
 stop_code = train_stations_dict[station_name]
 
-if not load_clicked:
+if "loaded" not in st.session_state:
+    st.session_state.loaded = False
+
+if st.sidebar.button("Load", type="primary"):
+    st.session_state.loaded = True
+
+if not st.session_state.loaded:
     st.info("Choose a date range and click **Load**.")
     st.stop()
 
 # --- Fetch station data from API (updates on selection change)
-station_df = merge_dfs_different_years(stop_code,RESOURCE_IDS,BASE,DEFAULT_TIMEOUT)
-station_df["date"] = pd.to_datetime(dict(year=station_df["year_key"], month=station_df["month_key"], day=1))
+station_df = fetch_station_df_cached(stop_code, RESOURCE_IDS, BASE, DEFAULT_TIMEOUT)
+
 
 if station_df is None or station_df.empty:
     st.warning("Couldn't fetch station data - check spelling or try another station.")
     st.stop()
 
+
 # --- Filter by dates (your helper)
 station_df = filter_df_by_dates(station_df, from_date, to_date)
+
 
 if station_df is None or station_df.empty:
     st.warning("Date range isn't available for this station (no data in selected period).")
     st.stop()
 
-# 1) Monthly averages (working days only)
-monthly_avg_df = station_avg_daily_activations_timeseries(station_df, YEARS, service_days)
-from_ts = pd.Timestamp(from_date)
-to_ts = pd.Timestamp(to_date)
+# 1) Station time series (month/day/year) + first chart
+with st.container(border=True):
+    interval = st.radio(
+        "Temporal interval",
+        options=TemporalInterval,
+        horizontal=True,
+        index=0,
+        key="temporal_interval",
+    )
 
-monthly_avg_df = monthly_avg_df[
-    (monthly_avg_df["date"] >= from_ts) &
-    (monthly_avg_df["date"] <= to_ts)
-].reset_index(drop=True)
+    ts_df = station_avg_daily_activations_timeseries(
+        station_df,
+        YEARS,
+        service_days,
+        temporal_interval=interval
+    )
+
+    # Trim to selected date range (works for all intervals)
+    from_ts = pd.Timestamp(from_date)
+    to_ts = pd.Timestamp(to_date)
+
+    if interval != "year":
+
+        ts_df = ts_df[(ts_df["date"] >= from_ts) & (ts_df["date"] <= to_ts)].reset_index(drop=True)
+
+    if ts_df.empty:
+        st.warning("No data available for the selected date range.")
+        st.stop()
+
+
+
+    fig = plot_station_timeseries(ts_df, station_name, temporal_interval=interval)
+    st.plotly_chart(fig, use_container_width=True, key=f"ts_{stop_code}_{interval}")
 
 # 2) Time-of-day distribution (percent)
 daily_pattern_df = get_daily_pattern_df(station_df, YEARS, service_days)
@@ -144,17 +176,9 @@ daily_pattern_df = get_daily_pattern_df(station_df, YEARS, service_days)
 # df_weekday = weekday_pattern_df(station_df, YEARS, service_days, weekdays_dict)
 
 
-# --- Layout: two main columns (charts left, map+pie right)
-with st.container(border=True):
-    fig = plot_station_daily_avg_by_month(monthly_avg_df, station_name)
-    st.plotly_chart(fig, use_container_width=True)
-
 col1, col2 = st.columns([2, 1])
 
 with col1:
-        #with st.container(border=True):
-        #    fig = plot_station_daily_avg_by_month(monthly_avg_df, station_name)
-        #    st.plotly_chart(fig, use_container_width=True)
 
     with st.container(border=True):
         fig2 = plot_daily_pattern_percent(daily_pattern_df, station_name=station_name, height=490)

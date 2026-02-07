@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from collections import defaultdict
+from config import TemporalInterval
+import calendar
 
 def station_avg_daily_activations(df: pd.DataFrame, year: int, month: int, service_days: dict) -> float:
     """
@@ -11,7 +13,7 @@ def station_avg_daily_activations(df: pd.DataFrame, year: int, month: int, servi
     day_sums = np.array([df.loc[df.month_key == month, day].sum() for day in days])
     return float(round(day_sums.mean(), 1))
 
-def station_avg_daily_activations_timeseries(
+def station_avg_daily_activations_timeseries_old(
     df: pd.DataFrame,
     years: list[int],
     service_days_by_year: dict[int, dict[int, list[str]]],
@@ -56,6 +58,149 @@ def station_avg_daily_activations_timeseries(
     ts_df = ts_df[(ts_df["date"] >= df_min) & (ts_df["date"] <= df_max)]
 
     return ts_df
+
+def station_avg_daily_activations_timeseries(
+    df: pd.DataFrame,
+    years: list[int],
+    service_days_by_year: dict[int, dict[int, list[str]]],
+    temporal_interval: TemporalInterval = "month",
+) -> pd.DataFrame:
+    """
+    Compute average daily activations at different temporal intervals.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Station dataframe with columns: year_key, month_key, day_1..day_31
+    years : list[int]
+        Years to consider
+    service_days_by_year : dict
+        {year: {month: ["day_1", "day_2", ...]}} (working days only)
+    temporal_interval : "month" | "day" | "year"
+        Output granularity.
+
+    Returns
+    -------
+    DataFrame with columns:
+        date | avg_daily_activations
+
+    - month: date is YYYY-MM-01, value is avg daily activations in that month
+    - day:   date is YYYY-MM-DD, value is activations on that day
+    - year:  date is YYYY-01-01, value is avg daily activations in that year
+    """
+    rows = []
+
+    # Only work on requested years (optional but helps)
+    df = df[df["year_key"].isin(years)].copy()
+
+    if df.empty:
+        return pd.DataFrame(columns=["date", "avg_daily_activations"])
+
+    if temporal_interval == "month":
+        for year in years:
+            for month in range(1, 13):
+                days = service_days_by_year[year][month]
+
+                month_df = df.loc[(df["year_key"] == year) & (df["month_key"] == month)]
+
+                if month_df.empty or not days:
+                    avg_val = None
+                else:
+                    day_sums = np.array(
+                        [
+                            pd.to_numeric(month_df[day], errors="coerce").sum()
+                            for day in days
+                        ],
+                        dtype=float
+                    )
+                    avg_val = round(day_sums.mean(), 1)
+
+                rows.append({
+                    "date": pd.Timestamp(year=year, month=month, day=1),
+                    "avg_daily_activations": avg_val
+                })
+
+        ts_df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
+
+        # Trim to actual available range in df (safe min/max using constructed dates)
+        df_dates = pd.to_datetime(dict(year=df["year_key"], month=df["month_key"], day=1))
+        df_min, df_max = df_dates.min(), df_dates.max()
+        ts_df = ts_df[(ts_df["date"] >= df_min) & (ts_df["date"] <= df_max)]
+
+        return ts_df
+
+    # -----------------------
+    # DAY: one row per service day (exact date)
+    # -----------------------
+    if temporal_interval == "day":
+        for year in years:
+            for month in range(1, 13):
+                days = service_days_by_year[year][month]
+                month_df = df.loc[(df["year_key"] == year) & (df["month_key"] == month)]
+
+                if month_df.empty or not days:
+                    continue
+
+                # For each service day, sum across rows for that day column
+                for day_col in days:
+                    day_num = int(day_col.split("_")[1])
+
+                    # skip invalid dates (e.g., day_31 in a 30-day month)
+                    last_day = calendar.monthrange(year, month)[1]
+                    if day_num > last_day:
+                        continue
+
+                    val = float(pd.to_numeric(month_df[day_col], errors="coerce").sum())
+
+                    rows.append({
+                        "date": pd.Timestamp(year=year, month=month, day=day_num),
+                        "avg_daily_activations": round(val, 1)
+                    })
+
+        ts_df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
+        return ts_df
+
+    # -----------------------
+    # YEAR: avg daily activations across all service days in that year
+    # -----------------------
+    if temporal_interval == "year":
+        for year in years:
+            year_vals = []
+
+            for month in range(1, 13):
+                days = service_days_by_year[year][month]
+                month_df = df.loc[(df["year_key"] == year) & (df["month_key"] == month)]
+
+                if month_df.empty or not days:
+                    continue
+
+                # daily totals inside the month (only service days)
+                day_sums = np.array(
+                    [
+                        pd.to_numeric(month_df[day], errors="coerce").sum()
+                        for day in days
+                    ],
+                    dtype=float
+                )
+                year_vals.extend(day_sums.tolist())
+
+            avg_val = round(float(np.mean(year_vals)), 1) if year_vals else None
+
+            rows.append({
+                "date": pd.Timestamp(year=year, month=1, day=1),
+                "avg_daily_activations": avg_val
+            })
+
+        ts_df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
+
+        # Trim to actual available years in df (optional)
+        df_min_year = int(df["year_key"].min())
+        df_max_year = int(df["year_key"].max())
+        ts_df = ts_df[(ts_df["date"].dt.year >= df_min_year) & (ts_df["date"].dt.year <= df_max_year)]
+
+        return ts_df
+
+    raise ValueError("temporal_interval must be one of: 'month', 'day', 'year'")
 
 
 def _sum_time_of_day_for_day(
