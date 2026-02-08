@@ -129,8 +129,8 @@ def plot_station_timeseries(
     y_min = float(df["avg_daily_activations"].min())
     y_max = float(df["avg_daily_activations"].max())
 
-    y_lower = max(0, y_min - (y_min / 2 if y_min > 0 else 0))
-    y_upper = y_max + (y_max / 3 if y_max > 0 else 1)
+    y_lower = 0
+    y_upper = y_max + (y_max / 2 if y_max > 0 else 1)
 
     # --- x range
     x_min = df["date"].min()
@@ -168,6 +168,27 @@ def plot_station_timeseries(
                 "avg_daily_activations": meta["y_label"],
             },
         )
+
+        MARKER_GREEN = "#43A047"
+        LINE_GREEN = "#66BB6A"  # brighter
+
+        if temporal_interval == "day":
+            fig.update_traces(
+                marker=dict(size=4, color=MARKER_GREEN, line=dict(width=0)),
+                line=dict(color=LINE_GREEN, width=2),
+            )
+
+        elif temporal_interval == "month":
+            fig.update_traces(
+                marker=dict(size=8, color=MARKER_GREEN),
+                line=dict(color=LINE_GREEN, width=3),
+            )
+        else:
+            fig.update_traces(
+                marker=dict(size=8),
+                line=dict(width=3),
+            )
+
 
     # ==============================
     # COMMON LAYOUT

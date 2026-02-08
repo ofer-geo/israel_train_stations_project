@@ -193,10 +193,6 @@ def station_avg_daily_activations_timeseries(
 
         ts_df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
 
-        # Trim to actual available years in df (optional)
-        df_min_year = int(df["year_key"].min())
-        df_max_year = int(df["year_key"].max())
-        ts_df = ts_df[(ts_df["date"].dt.year >= df_min_year) & (ts_df["date"].dt.year <= df_max_year)]
 
         return ts_df
 
@@ -256,10 +252,12 @@ def get_daily_pattern_df(
         * 100
     )
 
+    daily_pattern_df["Time of day"] = daily_pattern_df["Time of day"].str[:13]
+
     return daily_pattern_df
 
 
-def weekday_pattern_df(df: pd.DataFrame, year: int, service_days: dict,weekdays_dict: dict) -> pd.DataFrame:
+def weekday_pattern_df_old(df: pd.DataFrame, year: int, service_days: dict,weekdays_dict: dict) -> pd.DataFrame:
     """
     Aggregate activations by weekday (Sun–Thu) for working days only.
     Returns a DF with total + percent.
@@ -278,4 +276,51 @@ def weekday_pattern_df(df: pd.DataFrame, year: int, service_days: dict,weekdays_
 
     weekday_df = pd.DataFrame([weekday_activations]).T.rename(columns={0: "total"})
     weekday_df["percent"] = round(weekday_df["total"] / weekday_df["total"].sum() * 100, 1)
+    return weekday_df
+
+
+def weekday_pattern_df(
+    df: pd.DataFrame,
+    years: list[int],
+    service_days_by_year: dict[int, dict[int, list[str]]],
+    weekdays_by_year: dict[int, dict[int, dict[str, str]]],
+) -> pd.DataFrame:
+    """
+    Aggregate activations by weekday (Sun–Thu) across multiple years,
+    using service days only (no Fri/Sat/holidays).
+
+    Returns a DataFrame:
+        index: weekday name
+        columns: total, percent
+    """
+    weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"]
+    weekday_activations = {d: 0 for d in weekdays}
+
+    for year in years:
+        for month in range(1, 13):
+            days = service_days_by_year[year][month]
+
+            # Filter once per (year, month) for speed
+            month_df = df.loc[(df["year_key"] == year) & (df["month_key"] == month)]
+            if month_df.empty:
+                continue
+
+            for day_col in days:
+                # Sum that day across all service periods / rows
+                total_day = month_df[day_col].sum(skipna=True)
+
+                # Map day->weekday using your precomputed dict
+                wd = weekdays_by_year[year][month][day_col]
+
+                # Keep only Sun–Thu (in case something slips in)
+                if wd in weekday_activations:
+                    weekday_activations[wd] += int(total_day)
+
+    weekday_df = (
+        pd.DataFrame.from_dict(weekday_activations, orient="index", columns=["total"])
+        .sort_index(key=lambda s: s.map({d: i for i, d in enumerate(weekdays)}))
+    )
+    total_sum = weekday_df["total"].sum()
+    weekday_df["percent"] = (weekday_df["total"] / total_sum * 100).round(1) if total_sum else 0.0
+
     return weekday_df
