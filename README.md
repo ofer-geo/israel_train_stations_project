@@ -27,19 +27,26 @@ This project is intended for:
 - **Station selector**
   - Choose any Israel Railways train station from the GTFS dataset
 
-- **Monthly average daily departures**
-  - Aggregated per month
-  - Calculated for **working days only**
+- **Flexible time resolution**
+  - Analyze data by **day**, **month**, or **year**
+  - Monthly & yearly views present **average daily departures**
+
+- **Custom date range**
+  - Select **From** and **To** year/month
+  - Instantly focus on a specific analysis period
+
+- **Working-day logic**
+  - Automatically excludes **Fridays, Saturdays, and Israeli public holidays**
 
 - **Time-of-day distribution**
   - Passenger departures grouped into **7 service periods**
   - Displayed as percentage share
 
-- **Weekday distribution**
-  - Share of passenger activations across **Sunday–Thursday**
-
 - **Geographic visualization**
   - Interactive station location map (Folium)
+
+- **Fast experience**
+  - Smart caching prevents repeated API calls and improves responsiveness
 
 ---
 
