@@ -21,7 +21,7 @@ from data.ckan_client import fetch_station_df_cached
 from data.gtfs import get_trains_stations_info
 from  calendar_utils.calendar_helpers import service_days_dict, get_month_day_weekday_dict, filter_df_by_dates
 from data_agg.data_aggregators import station_avg_daily_activations_timeseries, get_daily_pattern_df, weekday_pattern_df
-from visualization.plots import (plot_station_daily_avg_by_month, plot_daily_pattern_percent,plot_station_timeseries,plot_weekday_percent_pie)
+from visualization.plots import (plot_daily_pattern_percent,plot_station_timeseries,plot_weekday_percent_pie)
 from visualization.maps import station_location_on_map
 from config import BASE, RESOURCE_IDS, YEARS, DEFAULT_TIMEOUT, TemporalInterval, train_station_names_eng
 
