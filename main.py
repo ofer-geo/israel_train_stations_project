@@ -93,6 +93,7 @@ stations = pd.read_csv("data/stops.txt")
 # Build station selector options
 train_stations_dict, train_station_names = get_trains_stations_info(stations)
 
+
 # --- Sidebar controls
 st.sidebar.header("Controls")
 

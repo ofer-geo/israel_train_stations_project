@@ -4,7 +4,7 @@ from collections import defaultdict
 from config import TemporalInterval
 import calendar
 
-def station_avg_daily_activations(df: pd.DataFrame, year: int, month: int, service_days: dict) -> float:
+def station_avg_daily_activations(df: pd.DataFrame, month: int, service_days: dict) -> float:
     """
     Compute mean daily activations for a given month,
     excluding weekends/holidays (non_service_days).
@@ -16,7 +16,7 @@ def station_avg_daily_activations(df: pd.DataFrame, year: int, month: int, servi
 def station_avg_daily_activations_timeseries_old(
     df: pd.DataFrame,
     years: list[int],
-    service_days_by_year: dict[int, dict[int, list[str]]],
+    service_days_by_year: dict,
 ) -> pd.DataFrame:
     """
     Compute mean daily activations per month across multiple years.
@@ -62,7 +62,7 @@ def station_avg_daily_activations_timeseries_old(
 def station_avg_daily_activations_timeseries(
     df: pd.DataFrame,
     years: list[int],
-    service_days_by_year: dict[int, dict[int, list[str]]],
+    service_days_by_year: dict,
     temporal_interval: TemporalInterval = "month",
 ) -> pd.DataFrame:
     """
@@ -220,7 +220,7 @@ def _sum_time_of_day_for_day(
 def get_daily_pattern_df(
     df: pd.DataFrame,
     years: list[int],
-    service_days_by_year: dict[int, dict[int, list[str]]]
+    service_days_by_year: dict
 ) -> pd.DataFrame:
     """
     Build a time-of-day distribution across multiple years.
@@ -282,8 +282,8 @@ def weekday_pattern_df_old(df: pd.DataFrame, year: int, service_days: dict,weekd
 def weekday_pattern_df(
     df: pd.DataFrame,
     years: list[int],
-    service_days_by_year: dict[int, dict[int, list[str]]],
-    weekdays_by_year: dict[int, dict[int, dict[str, str]]],
+    service_days_by_year: dict,
+    weekdays_by_year: dict,
 ) -> pd.DataFrame:
     """
     Aggregate activations by weekday (Sun–Thu) across multiple years,
