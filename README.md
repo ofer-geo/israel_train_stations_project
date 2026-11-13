@@ -155,3 +155,7 @@ After deployment, the app can be shared via a public URL.
 ## Author
 
 **Ofer Shahal**, [portfolio](https://ofer-geo.github.io/personal_portfolio/projects/train-stations-dashboard/)
+
+## License
+
+[MIT](LICENSE)
