@@ -12,6 +12,10 @@ The dashboard is publicly available on Streamlit Community Cloud:
 
 **https://israeltrainstationsproject.streamlit.app/**
 
+![Station explorer: average daily departures over time for one station](docs/images/train-stations-dashboard-overview.png)
+
+![Time-of-day share, weekday distribution and station map](docs/images/train-stations-dashboard-detail.jpg)
+
 ---
 
 ## Purpose
@@ -59,7 +63,7 @@ This project is intended for:
 - Time-of-day analysis aggregates all working days across the year
 - Percent distributions are calculated relative to total yearly activations
 
-The analysis focuses on **the year 2025**.
+The dashboard covers **2023 to 2025**: one data.gov.il resource per year, merged per station.
 
 ---
 
@@ -93,14 +97,21 @@ The analysis focuses on **the year 2025**.
 ## Project Structure
 
 ```text
-train_stations_project/
-│
-├── main.py              # Streamlit application
-├── README.md            # Project documentation
-├── requirements.txt     # Python dependencies
-├── files/
-│   └── stations.txt     # GTFS stops data
-└── ...
+israel_train_stations_project/
+├── main.py                    Streamlit application
+├── config.py                  data.gov.il endpoints, yearly resource IDs, station codes
+├── data/
+│   ├── ckan_client.py         fetch and cache station activations from data.gov.il
+│   ├── gtfs.py                station names and coordinates from GTFS
+│   └── stops.txt              GTFS stops file
+├── data_agg/
+│   └── data_aggregators.py    daily averages, time-of-day and weekday patterns
+├── calendar_utils/
+│   └── calendar_helpers.py    service days: excludes weekends and Israeli holidays (pyluach)
+├── visualization/
+│   ├── plots.py               Plotly / Matplotlib charts
+│   └── maps.py                Folium station map
+└── requirements.txt
 ```
 
 ## Getting Started
@@ -109,7 +120,7 @@ train_stations_project/
 
 ```bash
 git clone https://github.com/ofer-geo/israel_train_stations_project.git
-cd train_stations_project
+cd israel_train_stations_project
 ```
 
 ### 2) Install dependencies
@@ -140,3 +151,7 @@ This project is designed to run on *Streamlit Community Cloud* directly from thi
 After deployment, the app can be shared via a public URL.
 
 ---
+
+## Author
+
+**Ofer Shahal**, [portfolio](https://ofer-geo.github.io/personal_portfolio/projects/train-stations-dashboard/)
